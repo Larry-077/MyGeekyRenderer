@@ -1,0 +1,31 @@
+# 忽略编译文件夹
+build/
+bin/
+out/
+
+# 忽略 CMake 产生的临时文件
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+
+# 忽略 IDE 配置文件 (VSCode, Visual Studio, Mac)
+.vscode/
+.idea/
+*.sln
+*.vcxproj
+*.vcxproj.user
+.DS_Store
+
+# 忽略编译出的二进制文件
+*.exe
+*.o
+*.obj
+*.lib
+*.dll
+*.a
+*.dylib
+
+# 忽略 ImGui 或其他库的中间文件 (如果不需要上传源码)
+# third_party/  <-- 如果你想上传库源码，就不要加这行

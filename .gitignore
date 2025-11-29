@@ -21,7 +21,7 @@ Makefile
 # 忽略编译出的二进制文件
 *.exe
 *.o
-*.obj
+
 *.lib
 *.dll
 *.a

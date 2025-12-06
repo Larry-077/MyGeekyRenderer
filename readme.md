@@ -142,9 +142,9 @@ main.cpp                    # GUI application (NEW)
 **Build:**
 ```bash
 mkdir build && cd build
-cmake .. -DUSE_IMGUI=ON
+cmake .. 
 make
-./MyGeekyRenderer [optional_model.obj]
+./MyGeekyRenderer 
 ```
 
 **Controls:**

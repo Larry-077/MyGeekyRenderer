@@ -9,19 +9,16 @@
 
 class CameraController {
 public:
-    // 固定球面参数
-    double radius;              // 相机到物体的距离（固定！）
-    double theta;               // 极角（俯仰）
-    double phi;                 // 方位角（旋转）
-    Eigen::Vector3d target;     // 物体中心
+    double radius;              
+    double theta;               
+    double phi;                 
+    Eigen::Vector3d target;     
     
-    // 自动旋转
     bool auto_rotate;
-    double rotation_speed;      // 度/秒
+    double rotation_speed;     
     
-    // 视野控制（Scale 改变这个！）
-    double base_view_size;      // 基础视野大小
-    double scale;               // 缩放因子 (0.5 - 3.0)
+    double base_view_size;     
+    double scale;               
     
     CameraController()
         : radius(10.0)
@@ -41,23 +38,19 @@ public:
         }
     }
     
-    void apply_to_camera(Camera& camera) {
-        // 球坐标 → 笛卡尔坐标（radius 固定！）
+    void apply_to_camera(Camera& camera, double aspect_correction = 1.0) {
         camera.e.x() = target.x() + radius * sin(theta) * cos(phi);
         camera.e.y() = target.y() + radius * cos(theta);
         camera.e.z() = target.z() + radius * sin(theta) * sin(phi);
         
-        // 计算视线方向
         Eigen::Vector3d view_dir = (target - camera.e).normalized();
         camera.w = -view_dir;
         
-        // 构建正交基
         Eigen::Vector3d up(0, 1, 0);
         if (std::abs(view_dir.dot(up)) > 0.99) {
             up = Eigen::Vector3d(0, 0, 1);
         }
         
-        // 手动叉积
         camera.u(0) = up(1) * camera.w(2) - up(2) * camera.w(1);
         camera.u(1) = up(2) * camera.w(0) - up(0) * camera.w(2);
         camera.u(2) = up(0) * camera.w(1) - up(1) * camera.w(0);
@@ -67,11 +60,10 @@ public:
         camera.v(1) = camera.w(2) * camera.u(0) - camera.w(0) * camera.u(2);
         camera.v(2) = camera.w(0) * camera.u(1) - camera.w(1) * camera.u(0);
         
-        // 关键！Scale 改变视野大小，不改变 radius
         camera.d = 1.0;
-        double current_view_size = base_view_size / scale;  // scale 越大，视野越小（放大）
+        double current_view_size = base_view_size / scale;
         camera.width = current_view_size;
-        camera.height = current_view_size;  // 先设为正方形，后面可能需要调整
+        camera.height = current_view_size * aspect_correction;  // ← 使用修正系数
     }
     
     void set_scale(double s) {
@@ -80,9 +72,9 @@ public:
     
     void set_target_and_fit(const Eigen::Vector3d& center, double size) {
         target = center;
-        radius = size * 2.0;           // 固定距离
-        base_view_size = size * 1.0;   // 基础视野
-        scale = 1.0;                   // 重置缩放
+        radius = size * 2.0;           
+        base_view_size = size * 1.0;  
+        scale = 1.0;                
     }
 };
 

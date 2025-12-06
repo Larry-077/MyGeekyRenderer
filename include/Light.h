@@ -3,10 +3,9 @@
 
 #include <Eigen/Core>
 
-// 方向光（平行光）
 struct DirectionalLight {
-    Eigen::Vector3d direction;  // 光线方向（指向光源）
-    double intensity;           // 光强度 0-1
+    Eigen::Vector3d direction;  
+    double intensity;          
     
     DirectionalLight() 
         : direction(0, 0, -1), intensity(1.0) {}
@@ -15,7 +14,6 @@ struct DirectionalLight {
         : direction(dir.normalized()), intensity(intens) {}
 };
 
-// 点光源
 struct PointLight {
     Eigen::Vector3d position;
     double intensity;

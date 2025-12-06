@@ -30,20 +30,16 @@ bool read_obj(
       v_list.emplace_back(x, y, z);
     } 
     else if (type == "f") {
-      // 读取面，支持正数和负数索引
       std::string v_str;
       std::vector<int> face_indices;
       
       while (ss >> v_str) {
-        // 解析 "v_idx/vt_idx/vn_idx" 格式，只取第一个 '/' 之前的数字
         size_t slash_pos = v_str.find('/');
         int v_idx = std::stoi(v_str.substr(0, slash_pos));
-        
-        // 处理负数索引（相对索引）
         if (v_idx < 0) {
-          v_idx = v_list.size() + v_idx; // 转换为正数索引
+          v_idx = v_list.size() + v_idx;
         } else {
-          v_idx = v_idx - 1; // OBJ 索引从 1 开始，转成从 0 开始
+          v_idx = v_idx - 1;
         }
         
         face_indices.push_back(v_idx);
@@ -52,14 +48,12 @@ bool read_obj(
       if (face_indices.size() == 3) {
         f_list.emplace_back(face_indices[0], face_indices[1], face_indices[2]);
       } else if (face_indices.size() == 4) {
-        // 如果是四边形，拆成两个三角形
         f_list.emplace_back(face_indices[0], face_indices[1], face_indices[2]);
         f_list.emplace_back(face_indices[0], face_indices[2], face_indices[3]);
       }
     }
   }
 
-  // Convert vector to Eigen Matrix
   V.resize(v_list.size(), 3);
   for (size_t i = 0; i < v_list.size(); i++) V.row(i) = v_list[i];
 

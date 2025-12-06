@@ -1,6 +1,6 @@
 #include <iostream>
 #include <chrono>
-#include <cstring> // for strncpy
+#include <cstring>
 #include <cmath>
 #include <algorithm>
 #include <Eigen/Core>
@@ -17,31 +17,23 @@
 #include "ASCIIRenderer.h"
 #include "CameraController.h"
 
-// ==========================================
-// 全局变量
-// ==========================================
 Scene g_scene;
 Camera g_camera;
 ASCIIRenderer g_renderer;
 CameraController g_camera_controller;
 
-// 用于 UI 输入的文件路径缓存
 char g_model_path_buffer[256] = ""; 
-// 光源旋转角度 (0-360)
-float g_light_angle = 45.0f;
+float g_light_theta = 120.0f;
+float g_light_phi =150.0f;
 
 double g_fps = 0.0;
 double g_render_time = 0.0;
 
-// ==========================================
-// 模型加载函数
-// ==========================================
 void load_model(const std::string& filename) {
     if (filename.empty()) return;
 
     std::cout << "Loading: " << filename << std::endl;
     
-    // 重置场景
     g_scene = Scene(); 
     g_scene.load_mesh(filename);
     
@@ -50,10 +42,9 @@ void load_model(const std::string& filename) {
         Eigen::RowVector3d size = g_scene.bvh->box.max_corner - g_scene.bvh->box.min_corner;
         double max_size = size.maxCoeff();
         
-        // 自动适配相机
         g_camera_controller.set_target_and_fit(
             Eigen::Vector3d(center(0), center(1), center(2)),
-            max_size * 0.8 // 稍微拉近一点，让物体显示更大
+            max_size * 0.8
         );
         
         std::cout << "✓ Loaded: " << g_scene.bvh->num_leaves << " triangles" << std::endl;
@@ -64,18 +55,12 @@ void load_model(const std::string& filename) {
 
 #ifdef USE_IMGUI
 
-// [已删除] 鼠标交互相关的回调函数和结构体
-
-// ==========================================
-// 主运行函数 (ImGui 循环)
-// ==========================================
 void run_with_imgui() {
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
         return;
     }
     
-    // MacOS 兼容设置
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -88,64 +73,72 @@ void run_with_imgui() {
     }
     
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); // 开启垂直同步
+    glfwSwapInterval(1);
     
-    // [已删除] glfwSetMouseButtonCallback 和 glfwSetCursorPosCallback
-    
-    // 初始化 ImGui
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 150");
     
-    // 如果启动时有参数，先加载一下
     if (strlen(g_model_path_buffer) > 0) {
         load_model(g_model_path_buffer);
     }
     
-    // 初始化默认值
     g_renderer.resolution = 120;
     g_camera_controller.scale = 1.0; 
-    
-    // 初始化光照：确保环境光不要太强，否则看不出光照方向变化
     g_renderer.ambient_strength = 0.2; 
-    g_renderer.light.intensity = 1.0;
+    g_renderer.light.intensity = 0.7;
+
+    glfwPollEvents();
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    ImGui::Render();
+    glfwSwapBuffers(window);
+    
+    ImVec2 char_size = ImGui::CalcTextSize("@");
+    float actual_char_aspect = char_size.y / char_size.x;
+    g_renderer.aspect_ratio_correction = actual_char_aspect / 2.0;
+    
+    std::cout << "Font character size: " << char_size.x << " x " << char_size.y << std::endl;
+    std::cout << "Character aspect ratio (H/W): " << actual_char_aspect << std::endl;
+    std::cout << "Aspect correction factor: " << g_renderer.aspect_ratio_correction << std::endl;
 
     auto last_time = std::chrono::high_resolution_clock::now();
     
-    // --- 主循环 ---
     while (!glfwWindowShouldClose(window)) {
-        // 1. 时间计算
         auto current_time = std::chrono::high_resolution_clock::now();
         double delta_time = std::chrono::duration<double>(current_time - last_time).count();
         last_time = current_time;
         g_fps = 1.0 / delta_time;
         
-        // 2. 更新逻辑
-        
-        // 2.1 更新相机 (仅处理自动旋转)
         g_camera_controller.update(delta_time);
-        g_camera_controller.apply_to_camera(g_camera);
+        g_camera_controller.apply_to_camera(g_camera, g_renderer.aspect_ratio_correction);
         
-        // 2.2 [关键修复] 更新光照
-        // Y 改为 -0.5 (向下照)，而不是 1.0 (向上照)
-        double angle_rad = g_light_angle * M_PI / 180.0;
-        g_renderer.light.direction = Eigen::Vector3d(sin(angle_rad), -0.5, cos(angle_rad)).normalized();
+        double theta_rad = g_light_theta * M_PI / 180.0;
+        double phi_rad = g_light_phi * M_PI / 180.0;
         
-        // 3. 渲染 ASCII
+        Eigen::Vector3d camera_right = g_camera.u;
+        Eigen::Vector3d camera_up = g_camera.v;
+        Eigen::Vector3d camera_forward = -g_camera.w;
+        
+        g_renderer.light.direction = (
+            sin(theta_rad) * cos(phi_rad) * camera_right +
+            cos(theta_rad) * camera_up +
+            sin(theta_rad) * sin(phi_rad) * camera_forward
+        ).normalized();
+        
         auto render_start = std::chrono::high_resolution_clock::now();
         std::string ascii_frame = g_renderer.render(g_scene, g_camera);
         auto render_end = std::chrono::high_resolution_clock::now();
         g_render_time = std::chrono::duration<double>(render_end - render_start).count();
         
-        // 4. ImGui 绘制
         glfwPollEvents();
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         
-        // --- 窗口 1: ASCII 显示区 ---
         const float ascii_window_width = 1100.0f;
         const float ascii_window_height = 880.0f;
         
@@ -165,7 +158,6 @@ void run_with_imgui() {
         ImGui::SetWindowFontScale(1.0f);
         ImGui::End();
         
-        // --- 窗口 2: 控制面板 ---
         ImGui::SetNextWindowPos(ImVec2(1120, 10), ImGuiCond_Always);
         ImGui::SetNextWindowSize(ImVec2(270, 880), ImGuiCond_Always);
         ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
@@ -175,7 +167,6 @@ void run_with_imgui() {
         
         ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
         
-        // 模型加载器
         ImGui::TextColored(ImVec4(1, 1, 0, 1), "Model Selection");
         const char* model_names[] = { "Mitsuba Sphere", "Dragon", "Buddha"};
         const char* model_paths[] = { "../assets/mitsuba-sphere.obj", "../assets/dragon.obj", "../assets/buddha.obj"};
@@ -194,7 +185,6 @@ void run_with_imgui() {
         
         ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
         
-        // 渲染设置
         ImGui::TextColored(ImVec4(0, 1, 1, 1), "Render Settings");
         ImGui::Text("Resolution");
         ImGui::SliderInt("##res", &g_renderer.resolution, 40, 400);
@@ -205,17 +195,32 @@ void run_with_imgui() {
             g_camera_controller.set_scale(scale_val);
         }
         
+        ImGui::Text("Charset");
+        const char* charset_names[] = {"Simple", "Detailed"};
+        ImGui::Combo("##charset", &g_renderer.charset_type, charset_names, 2);
+        
         ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
         
-        // 光照设置
         ImGui::TextColored(ImVec4(1, 0.5, 0, 1), "Lighting");
-        ImGui::Text("Light Angle");
-        ImGui::SliderFloat("##angle", &g_light_angle, 0.0f, 360.0f);
+        ImGui::Text("Light Type: Directional + Ambient");
+        ImGui::Text("(Camera Space - Follows View)");
         
-        ImGui::Text("Intensity");
+        ImGui::Text("Light Theta (Elevation)");
+        ImGui::SliderFloat("##theta", &g_light_theta, 0.0f, 180.0f);
+        
+        ImGui::Text("Light Phi (Azimuth)");
+        ImGui::SliderFloat("##phi", &g_light_phi, 0.0f, 360.0f);
+        
+        ImGui::Text("Light Intensity");
         float intensity = (float)g_renderer.light.intensity;
         if (ImGui::SliderFloat("##intensity", &intensity, 0.0f, 2.0f)) {
             g_renderer.light.intensity = intensity;
+        }
+        
+        ImGui::Text("Ambient Strength");
+        float ambient = (float)g_renderer.ambient_strength;
+        if (ImGui::SliderFloat("##ambient", &ambient, 0.0f, 1.0f)) {
+            g_renderer.ambient_strength = ambient;
         }
         
         ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
@@ -225,13 +230,13 @@ void run_with_imgui() {
             g_camera_controller.theta = M_PI / 2.0;
             g_camera_controller.phi = 0.0;
             g_camera_controller.scale = 1.0;
-            g_light_angle = 45.0f;
+            g_light_theta = 120.0f;
+            g_light_phi = 90.0f;
             g_camera_controller.auto_rotate = true;
         }
         
         ImGui::End();
         
-        // 5. 渲染
         ImGui::Render();
         int display_w, display_h;
         glfwGetFramebufferSize(window, &display_w, &display_h);
@@ -243,7 +248,6 @@ void run_with_imgui() {
         glfwSwapBuffers(window);
     }
     
-    // 清理
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();

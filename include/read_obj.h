@@ -5,9 +5,8 @@
 #include <string>
 #include <vector>
 
-// 简单的 OBJ 读取函数
 // Inputs:
-//   filename  .obj 文件的路径
+//   filename  
 // Outputs:
 //   V  Vertices (n x 3 matrix)
 //   F  Faces (m x 3 matrix)

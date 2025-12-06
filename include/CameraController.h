@@ -75,7 +75,7 @@ public:
     }
     
     void set_scale(double s) {
-        scale = std::clamp(s, 0.3, 5.0);
+        scale = std::clamp(s, 0.01, 100.0);
     }
     
     void set_target_and_fit(const Eigen::Vector3d& center, double size) {

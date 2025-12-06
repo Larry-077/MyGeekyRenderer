@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Option to enable ImGui
-option(USE_IMGUI "Build with ImGui GUI support" OFF)
+option(USE_IMGUI "Build with ImGui GUI support" ON)
 
 # Try to find Eigen3
 find_package(Eigen3 3.3 QUIET NO_MODULE)
@@ -42,11 +42,8 @@ set(SOURCES
     src/ray_intersect_box.cpp
     src/ray_intersect_triangle.cpp
     src/read_obj.cpp
-    src/Triangle.cpp
-    src/TriangleSoup.cpp
     src/vertex_triangle_adjacency.cpp
     src/viewing_ray.cpp
-    src/first_hit.cpp
     src/triangle_area_normal.cpp
     src/ASCIIRenderer.cpp
 )

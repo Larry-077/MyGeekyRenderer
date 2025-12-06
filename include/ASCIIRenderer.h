@@ -21,6 +21,7 @@ public:
     // 光照参数
     DirectionalLight light;
     double ambient_strength;  // 环境光强度
+    float light_angle = 45.0f; 
     
     // 字符集
     std::vector<std::string> charsets;

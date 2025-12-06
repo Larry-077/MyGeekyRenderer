@@ -4,6 +4,7 @@
 #include "Object.h"
 #include <Eigen/Core>
 #include <memory>
+#include <cassert>
 
 struct MeshTriangle : public Object
 {

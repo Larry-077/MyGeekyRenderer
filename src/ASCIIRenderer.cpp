@@ -2,8 +2,12 @@
 #include <algorithm>
 #include <cmath>
 
+
 std::string ASCIIRenderer::render(const Scene& scene, const Camera& camera) {
     std::string output;
+    
+    double angle_rad = light_angle * M_PI / 180.0;
+    light.direction = Eigen::Vector3d(sin(angle_rad), 1.0, cos(angle_rad)).normalized();
     
     int grid_width, grid_height;
     get_grid_size(grid_width, grid_height);

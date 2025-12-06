@@ -6,6 +6,7 @@
 #include <Eigen/Core>
 #include <memory>
 #include <vector>
+#include <cassert>
 
 // Implementation
 #include "ray_intersect_box.h"
